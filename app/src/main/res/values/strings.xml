@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">College Tracker</string>
+    <string name="app_tagline">Admissions, essays, financial aid, and deadlines in one calm workspace.</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="sign_out">Sign out</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_schools">Schools</string>
+    <string name="nav_calendar">Calendar</string>
+    <string name="nav_essay_types">Essay Types</string>
+    <string name="add_school">Add School</string>
+    <string name="edit_school">Edit School</string>
+    <string name="add_supplement">Add Supplement</string>
+    <string name="edit_supplement">Edit Supplement</string>
+    <string name="progress_mode_word_weighted">Word-Weighted</string>
+    <string name="progress_mode_essay_count">Essay Count</string>
+</resources>

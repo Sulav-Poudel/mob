@@ -1,0 +1,196 @@
+{
+  "entities": {
+    "University": {
+      "title": "University",
+      "description": "A target college/university with admissions status, deadlines, financial aid requirements, English proficiency policy, and college-specific traits.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "University display name."
+        },
+        "applicationDeadlineMillis": {
+          "type": "integer",
+          "description": "Optional UTC midnight epoch milliseconds for application deadline."
+        },
+        "applicationStatus": {
+          "type": "string",
+          "enum": ["NOT_STARTED", "IN_PROGRESS", "WAITLISTED", "ACCEPTED"],
+          "description": "Current application status."
+        },
+        "targetSupplementCount": {
+          "type": "integer",
+          "description": "Target/expected number of supplemental essays."
+        },
+        "financialAidDeadlineMillis": {
+          "type": "integer",
+          "description": "Optional UTC midnight epoch milliseconds for financial aid deadline."
+        },
+        "cssProfileRequirement": {
+          "type": "string",
+          "enum": ["COMPULSORY", "EASY_ALTERNATIVE", "ALTERNATIVE_WITH_MAIL", "VERY_HARD_ALTERNATIVE"],
+          "description": "CSS Profile or alternative aid form requirement."
+        },
+        "financialAidDocStatus": {
+          "type": "string",
+          "enum": ["NOT_STARTED", "STARTED", "DONE"],
+          "description": "Completion status of financial aid documents."
+        },
+        "englishProficiency": {
+          "type": "string",
+          "enum": ["REQUIRED", "EASY_WAIVE", "EMAIL_WAIVE", "MOI_REQUIRED"],
+          "description": "English proficiency test or waiver policy."
+        },
+        "collegeTraits": {
+          "type": "string",
+          "description": "College-specific traits, programs, values, and research notes."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "applicationStatus",
+        "targetSupplementCount",
+        "cssProfileRequirement",
+        "financialAidDocStatus",
+        "englishProficiency",
+        "collegeTraits",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Supplement": {
+      "title": "Supplement",
+      "description": "A supplemental essay belonging to a target university with status, word count bucket, reusable essay type, prompt, and brainstorming notes.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "universityId": {
+          "type": "string",
+          "description": "Parent University document ID."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short optional label for the supplement."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["NOT_STARTED", "IN_PROGRESS", "READY_TO_SUBMIT"],
+          "description": "Drafting status used for progress calculations."
+        },
+        "wordBucket": {
+          "type": "string",
+          "enum": ["W100", "W150", "W250", "W250_500", "W500_PLUS"],
+          "description": "Word limit bucket determining word-weighted progress."
+        },
+        "essayType": {
+          "type": "string",
+          "description": "Essay category chosen from reusable supplement types or custom typed."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Official essay prompt text."
+        },
+        "brainstormNotes": {
+          "type": "string",
+          "description": "Brainstorming outline and ideas for this supplement."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "universityId",
+        "title",
+        "status",
+        "wordBucket",
+        "essayType",
+        "prompt",
+        "brainstormNotes",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SupplementType": {
+      "title": "SupplementType",
+      "description": "A reusable supplemental essay category shared across all universities for the user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the essay type."
+        },
+        "normalizedName": {
+          "type": "string",
+          "description": "Lowercase trimmed name for case-insensitive uniqueness."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp()."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp set via FieldValue.serverTimestamp()."
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "normalizedName",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/universities/{universityId}": {
+      "schema": {
+        "$ref": "#/entities/University"
+      },
+      "description": "Per-user collection of target universities."
+    },
+    "/users/{userId}/supplements/{supplementId}": {
+      "schema": {
+        "$ref": "#/entities/Supplement"
+      },
+      "description": "Per-user collection of supplemental essays linked to universities."
+    },
+    "/users/{userId}/supplementTypes/{typeId}": {
+      "schema": {
+        "$ref": "#/entities/SupplementType"
+      },
+      "description": "Per-user catalog of reusable supplemental essay types."
+    }
+  }
+}

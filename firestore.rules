@@ -1,0 +1,182 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: default-deny everything unless explicitly allowed below
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUniversity(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.name is string &&
+             data.name.size() >= 1 &&
+             data.name.size() <= 120 &&
+             (!('applicationDeadlineMillis' in data) || (data.applicationDeadlineMillis is int && data.applicationDeadlineMillis >= 0)) &&
+             data.applicationStatus in ['NOT_STARTED', 'IN_PROGRESS', 'WAITLISTED', 'ACCEPTED'] &&
+             data.targetSupplementCount is int &&
+             data.targetSupplementCount >= 0 &&
+             data.targetSupplementCount <= 50 &&
+             (!('financialAidDeadlineMillis' in data) || (data.financialAidDeadlineMillis is int && data.financialAidDeadlineMillis >= 0)) &&
+             data.cssProfileRequirement in ['COMPULSORY', 'EASY_ALTERNATIVE', 'ALTERNATIVE_WITH_MAIL', 'VERY_HARD_ALTERNATIVE'] &&
+             data.financialAidDocStatus in ['NOT_STARTED', 'STARTED', 'DONE'] &&
+             data.englishProficiency in ['REQUIRED', 'EASY_WAIVE', 'EMAIL_WAIVE', 'MOI_REQUIRED'] &&
+             data.collegeTraits is string &&
+             data.collegeTraits.size() <= 2000 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidSupplement(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             isValidId(data.universityId) &&
+             data.title is string &&
+             data.title.size() <= 120 &&
+             data.status in ['NOT_STARTED', 'IN_PROGRESS', 'READY_TO_SUBMIT'] &&
+             data.wordBucket in ['W100', 'W150', 'W250', 'W250_500', 'W500_PLUS'] &&
+             data.essayType is string &&
+             data.essayType.size() <= 80 &&
+             data.prompt is string &&
+             data.prompt.size() <= 3000 &&
+             data.brainstormNotes is string &&
+             data.brainstormNotes.size() <= 10000 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    function isValidSupplementType(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.userId == request.auth.uid &&
+             data.name is string &&
+             data.name.size() >= 1 &&
+             data.name.size() <= 80 &&
+             data.normalizedName is string &&
+             data.normalizedName.size() >= 1 &&
+             data.normalizedName.size() <= 80 &&
+             data.createdAt is timestamp &&
+             data.createdAt <= request.time &&
+             data.updatedAt is timestamp &&
+             data.updatedAt <= request.time;
+    }
+
+    match /users/{userId}/universities/{universityId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(universityId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(universityId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'name', 'applicationStatus', 'targetSupplementCount',
+                         'cssProfileRequirement', 'financialAidDocStatus',
+                         'englishProficiency', 'collegeTraits', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'name', 'applicationDeadlineMillis', 'applicationStatus',
+                         'targetSupplementCount', 'financialAidDeadlineMillis',
+                         'cssProfileRequirement', 'financialAidDocStatus',
+                         'englishProficiency', 'collegeTraits', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUniversity(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(universityId) &&
+                       isValidUniversity(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'name', 'applicationDeadlineMillis', 'applicationStatus',
+                         'targetSupplementCount', 'financialAidDeadlineMillis',
+                         'cssProfileRequirement', 'financialAidDocStatus',
+                         'englishProficiency', 'collegeTraits', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(universityId);
+    }
+
+    match /users/{userId}/supplements/{supplementId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(supplementId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(supplementId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'universityId', 'title', 'status', 'wordBucket',
+                         'essayType', 'prompt', 'brainstormNotes', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'universityId', 'title', 'status', 'wordBucket',
+                         'essayType', 'prompt', 'brainstormNotes', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidSupplement(incoming(), userId) &&
+                       exists(/databases/$(database)/documents/users/$(userId)/universities/$(incoming().universityId));
+
+      allow update: if isOwner(userId) &&
+                       isValidId(supplementId) &&
+                       isValidSupplement(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().universityId == existing().universityId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'title', 'status', 'wordBucket', 'essayType',
+                         'prompt', 'brainstormNotes', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(supplementId);
+    }
+
+    match /users/{userId}/supplementTypes/{typeId} {
+      allow list: if isOwner(userId);
+      allow get: if isOwner(userId) && isValidId(typeId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(typeId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'name', 'normalizedName', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'name', 'normalizedName', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidSupplementType(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(typeId) &&
+                       isValidSupplementType(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'name', 'normalizedName', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(typeId);
+    }
+  }
+}
